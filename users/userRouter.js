@@ -14,10 +14,13 @@ router.post('/', validateUser, (req, res) => {
   })
 });
 
-router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
+router.post('/:id/posts', validatePost, (req, res) => {
+  console.log(req.body);
+  req.body.user_id =  req.params.id;
   postDb
     .insert(req.body)
     .then((post) => {
+      
       res.status(200).json(post);
     })
     .catch((err) => {
@@ -38,7 +41,8 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', validateUserId,(req, res) => {
-  db.getById(req.params.id)
+  console.log(req);
+  db.getById(req.user.id)
   .then(user => {
     res.status(200).json(user);
   })
@@ -76,9 +80,10 @@ router.delete('/:id', validateUserId, (req, res) => {
   })
 });
 
-router.put('/:id',validateUserId,  (req, res) => {
+router.put('/:id', validateUserId,  (req, res) => {
   db.update(req.params.id, req.body)
-  .then()(count => {
+  .then(count => {
+    console.log(count);
     if (count == 1) {
       res.status(200).json({msg: "user updated"});
     }
@@ -100,6 +105,8 @@ function validateUserId(req, res, next) {
   db.getById(id)
     .then((user) => {
       if (user) {
+        req.user = user
+
         next();
       } else {
         res.status(404).send("invalid user id");
@@ -111,33 +118,34 @@ function validateUserId(req, res, next) {
 }
 
 function validateUser(req, res, next) {
-  let id = req.params.id;
-
-  console.log(Object.keys(req.body));
-  db.getById(id)
-    .then((user) => {
-      if (user) {
-        next();
-      } else {
-        res.status(404).send("invalid user id");
-      }
+  const user = req.body
+  if(!user){
+    res.status(400).json({
+      message: "Missing user data"
     })
-    .catch((err) => {
-      res.status(500).send("user id error");
-    });
+  }else if(!user.name){
+    res.status(400).json({
+      message: "Missing required name field"
+    })
+  }else {
+    next()
+  }
 }
 
+
 function validatePost(req, res, next) {
-  if (Object.keys(req.body).length == 0) {
-    res.status(400).json({
-      msg: "missing data",
-    });
-  } else if (req.body.text === "") {
-    res.status(400).json({
-      msg: "missing text",
-    });
+  const post = req.body
+  if(!post){
+  res.status(400).json({
+      message: "Missing post data"
+      })
+  }else if(!post.text){
+  res.status(400).json({
+      message: "Missing required text field"
+      })
+  } else {
+      next()
   }
-  next();
 }
 
 module.exports = router;
